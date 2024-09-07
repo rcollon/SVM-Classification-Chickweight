@@ -1,5 +1,5 @@
 
-#Simple classificaiton using ChickenWeight dataset. The data 
+#Simple classificaiton using ChickenWeight dataset. 
 
 .libPaths()
 # install missing packages 
@@ -35,27 +35,25 @@ chickWeight %>% group_by (time,diet) %>% summarize (mean_weight=mean(weight)) %>
 
 # SVM Classifier
 
-# Use a hyperplane to classify objects that are linearly seperable. If the objects are not linearly separable then 
+# Use a hyperplane to classify objects that are linearly separable. If the objects are not linearly separable then 
 # Predict type of diet by chicken weight
 
 # Set seed for reproducible samples
 set.seed(28)
 # Initial split with 80% in training
-# nesting by chick so that individual chicks are not seperated. Creating a strata of 
+# nesting by chick so that individual chicks are not separated.Stratified by diet because of the different count of chicks in each diet category
 groupedChickWeight <- chickWeight %>% nest_by (chick, diet)
 dataSplit <- groupedChickWeight %>% initial_split(prop=.8, strata=diet)
 train <- training(dataSplit) %>% unnest(data)
 test <- testing(dataSplit) %>% unnest(data)
 
-# Remove target variable
+# Remove target variable when classifying
 testDiet <- test %>% select (diet)
 test <- test %>% select (-diet)
 
 # Recipe 
 svmRecipe <- recipe(diet ~ ., data = train) %>%  
   step_dummy(chick, one_hot = TRUE)
-  #step_mutate(chick = as.character(chick))
-  #step_normalize(all_predictors())
 
 # Model
 svmModel <- svm_linear () %>%
@@ -80,8 +78,7 @@ svmMetrics <- svmPredict %>%
 
 svmMetrics
 
+# Visualise accuracy. Accuracy improves over time (as chicks become heavier)
 svmMetricsTime <- svmPredict %>% bind_cols(test) %>% group_by (time) %>% metrics(truth = diet, estimate = .pred_class)
-
-# Visualise accuracy. Accuracy improves over time 
 svmMetricsTime %>% filter(.metric=="accuracy") %>% ggplot (aes(x=time,  y=.estimate)) + geom_bar(stat="identity") + ggtitle ("Accuracy over time")
 svmMetricsTime
